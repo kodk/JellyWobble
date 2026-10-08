@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>果冻晃动 · 4 果冻</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; height: 100dvh; margin: 0; overflow: hidden; }
+  body {
+    background: #141414;
+    color: #222;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    font-size: 13px;
+  }
+
+  #app { display: flex; height: 100%; height: 100dvh; width: 100vw; overflow: hidden; }
+
+  #panelWrap {
+    width: 350px; flex-shrink: 0;
+    background: #ffffff;
+    border-right: 1px solid #e0e0e0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transition: width .28s ease, border-color .28s ease;
+  }
+  #panelWrap.collapsed { width: 0; border-right-color: transparent; }
+
+  #panelInner {
+    width: 350px; height: 100%;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  #panelHeader {
+    flex-shrink: 0;
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px));
+    background: #fafafa;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  #panelHeader h1 {
+    font-size: 13px; margin: 0; color: #222; font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  .mini-dots { display: inline-flex; gap: 3px; flex-shrink: 0; }
+  .mini-dots span {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+  .mini-dots .d0 { background: #FF0000; }
+  .mini-dots .d1 { background: #87CEEB; }
+  .mini-dots .d2 { background: #FFFF00; }
+  .mini-dots .d3 { background: #90EE90; }
+
+  .header-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .icon-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    color: #666;
+    border: 1px solid #d5d5d5;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .12s, color .12s, transform .1s;
+    flex-shrink: 0;
+  }
+  .icon-btn:hover { background: #e5e5e5; color: #333; }
+  .icon-btn:active { transform: scale(.92); }
+  .icon-btn svg { display: block; }
+
+  /* 帮助按钮稍微突出一点颜色 */
+  #btnHelp {
+    color: #2c7be5;
+    border-color: #b8d4f5;
+    background: #eef5fd;
+  }
+  #btnHelp:hover { background: #dfeafa; color: #1e5fb8; }
+
+  #togglePanelBtn {
+    background: #f0f0f0; color: #555;
+    border: 1px solid #d5d5d5;
+    padding: 5px 9px; border-radius: 7px;
+    cursor: pointer; font-size: 12px; font-family: inherit;
+    display: flex; align-items: center; gap: 4px;
+    transition: background .12s, color .12s; flex-shrink: 0;
+    height: 30px;
+  }
+  #togglePanelBtn:hover { background: #e5e5e5; color: #222; }
+  #togglePanelBtn .arrow { font-size: 10px; line-height: 1; }
+
+  #toolbar {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0; background: #ffffff;
+  }
+
+  .row {
+    padding: 9px 12px;
+    display: flex; gap: 6px; align-items: center;
+    flex-wrap: wrap; border-bottom: 1px solid #ececec;
+  }
+  .row:last-child { border-bottom: none; }
+  .row.shared { background: #fafafa; }
+  .row.export-row { background: #f0f7f2; flex-direction: column; align-items: stretch; gap: 6px; }
+
+  .row-label {
+    color: #888; font-size: 11px; letter-spacing: .5px;
+    width: 100%; margin-bottom: 2px;
+    text-transform: uppercase; font-weight: 600;
+  }
+
+  /* ===== 折叠区块 ===== */
+  .panel-section {
+    border-bottom: 1px solid #ececec;
+    background: #ffffff;
+  }
+  .panel-section:last-child { border-bottom: none; }
+
+  .section-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: #fafafa;
+    cursor: pointer;
+    user-select: none;
+    transition: background .12s;
+  }
+  .section-header:hover { background: #f0f0f0; }
+  .section-title {
+    font-weight: 600; font-size: 12px; color: #333;
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .jelly-tabs {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    flex: 0 0 auto;
+  }
+  .jelly-tab {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    padding: 0;
+    background: var(--c);
+    border: none;
+    cursor: pointer;
+    transition: transform .12s, box-shadow .15s, opacity .15s;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.12);
+    outline: none;
+    position: relative;
+    opacity: 0.3;
+  }
+  .jelly-tab:hover {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  .jelly-tab.active {
+    opacity: 1;
+    transform: scale(1.05);
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #333;
+  }
+
+  .section-arrow {
+    margin-left: auto;
+    color: #999;
+    font-size: 11px;
+    line-height: 1;
+    transition: transform .2s;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .panel-section.collapsed .section-arrow {
+    transform: rotate(-90deg);
+  }
+
+  .section-body {
+    overflow: hidden;
+    transition: max-height .25s ease;
+    max-height: 2000px;
+  }
+  .panel-section.collapsed .section-body {
+    max-height: 0;
+  }
+
+  .jelly-row { background: var(--jelly-row-bg); }
+  .jelly-row.active-row { box-shadow: inset 3px 0 0 var(--jelly-accent); }
+  .jelly-row.hidden { display: none; }
+
+  .jelly-label {
+    font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+    flex-shrink: 0; font-size: 12px; color: #222;
+  }
+  .dot {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  }
+
+  .group { display: flex; align-items: center; gap: 6px; color: #555; flex-shrink: 0; font-size: 12px; }
+
+  .group input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 84px; height: 24px;
+    background: transparent; outline: none;
+    cursor: pointer; margin: 0; padding: 0;
+  }
+  .group input[type=range]::-webkit-slider-runnable-track {
+    height: 6px; background: #e5e5e5; border-radius: 3px; border: none;
+  }
+  .group input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px;
+    background: #e74c3c;
+    border-radius: 50%;
+    margin-top: -6px;
+    box-shadow: 0 1px 4px rgba(231,76,60,.45);
+    transition: transform .1s; border: none;
+  }
+  .group input[type=range]:active::-webkit-slider-thumb { transform: scale(1.15); }
+  .group input[type=range]::-moz-range-track {
+    height: 6px; background: #e5e5e5; border-radius: 3px; border: none;
+  }
+  .group input[type=range]::-moz-range-thumb {
+    width: 18px; height: 18px;
+    background: #e74c3c;
+    border-radius: 50%; border: none;
+    box-shadow: 0 1px 4px rgba(231,76,60,.45);
+  }
+
+  .group .val {
+    min-width: 32px; text-align: right;
+    color: #e74c3c;
+    font-variant-numeric: tabular-nums; font-size: 11px; font-weight: 600;
+    cursor: pointer; user-select: none;
+    padding: 2px 3px; border-radius: 3px;
+    transition: background .12s;
+  }
+  .group .val:hover { background: rgba(231,76,60,.08); }
+
+  .row.shared { flex-direction: column; align-items: stretch; gap: 3px; }
+  .row.shared .row-label { margin-bottom: 4px; }
+  .row.shared .group { width: 100%; gap: 8px; padding: 1px 0; }
+  .row.shared .group label { width: 56px; flex-shrink: 0; font-size: 12px; color: #555; }
+  .row.shared .group input[type=range] { flex: 1; width: auto; min-width: 0; }
+  .row.shared .group .val { width: 40px; flex-shrink: 0; text-align: right; color: #e74c3c; }
+
+  button {
+    background: #f0f0f0; color: #333;
+    border: 1px solid #d5d5d5;
+    padding: 5px 10px; border-radius: 5px;
+    cursor: pointer; font-size: 12px; font-family: inherit;
+    transition: background .12s, border-color .12s, color .12s;
+    flex-shrink: 0;
+  }
+  button:hover { background: #e5e5e5; }
+  button.active { color: #fff; }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+
+  .jelly-row button.mode-btn.active {
+    background: var(--jelly-accent);
+    border-color: var(--jelly-accent);
+    color: var(--jelly-accent-text);
+  }
+  .jelly-row button.toggle-btn.active {
+    background: var(--jelly-cursor);
+    border-color: var(--jelly-cursor);
+    color: var(--jelly-cursor-text);
+  }
+
+  #btnExport {
+    background: #e8f5ec; border-color: #b8dcc4; color: #2c5a3a;
+    font-weight: 500; flex: 1;
+  }
+  #btnExport:hover:not(:disabled) { background: #d8ecdf; }
+  #btnExport.recording {
+    background: #c0392b; border-color: #e74c3c; color: #fff;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(231,76,60,.6); }
+    50% { box-shadow: 0 0 0 6px rgba(231,76,60,0); }
+  }
+
+  .sep { width: 1px; height: 16px; background: #ddd; flex-shrink: 0; margin: 0 2px; }
+
+  select {
+    background: #f0f0f0; color: #333;
+    border: 1px solid #d5d5d5;
+    padding: 4px 6px; border-radius: 5px;
+    font-size: 12px; font-family: inherit;
+    cursor: pointer; outline: none; flex-shrink: 0;
+  }
+  select:hover { background: #e5e5e5; }
+
+  .row.export-row .row-label { margin-bottom: 2px; }
+  .row.export-row .group { width: 100%; gap: 8px; }
+  .row.export-row .group label { width: 56px; flex-shrink: 0; }
+  .row.export-row .group input[type=range] { flex: 1; width: auto; min-width: 0; }
+  .row.export-row .group .val { width: 40px; flex-shrink: 0; text-align: right; color: #e74c3c; }
+
+  #stage {
+    flex: 1; min-width: 0;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; background: #0a0a0a; padding: 10px;
+  }
+  #canvas {
+    display: block; max-width: 100%; max-height: 100%;
+    cursor: crosshair; touch-action: none;
+    box-shadow: 0 0 40px rgba(0,0,0,.6); border-radius: 2px;
+  }
+  #overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none; padding: 20px;
+  }
+  #overlay.hidden { display: none; }
+  #uploadBtn {
+    pointer-events: auto; padding: 26px 40px; font-size: 15px;
+    background: #222; border: 2px dashed #444; border-radius: 12px;
+    color: #aaa; cursor: pointer; font-family: inherit;
+  }
+  #uploadBtn:hover { border-color: #e74c3c; color: #ddd; }
+  #fileInput { display: none; }
+
+  #floatToggle {
+    position: absolute; top: 12px; left: 12px; z-index: 60;
+    width: 44px; height: 44px; border-radius: 11px;
+    background: rgba(38,38,38,.92); color: #eee;
+    border: 1px solid #555;
+    cursor: pointer; display: none;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 14px rgba(0,0,0,.45);
+    transition: background .12s, transform .12s;
+    padding: 0; font-size: 18px; font-family: inherit;
+  }
+  #floatToggle:hover { background: rgba(56,56,56,.95); transform: scale(1.06); }
+  #floatToggle:active { transform: scale(.96); }
+  #panelWrap.collapsed ~ #stage #floatToggle { display: flex; }
+
+  #floatingHint {
+    position: absolute; bottom: 14px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30,30,30,.9); color: #ddd;
+    padding: 7px 16px; border-radius: 20px; font-size: 12px;
+    pointer-events: none; opacity: 0; transition: opacity .3s;
+    border: 1px solid #444; max-width: 85%; text-align: center; z-index: 55;
+  }
+  #floatingHint.show { opacity: 1; }
+
+  .brush-cursor {
+    position: fixed;
+    border: 1.5px solid rgba(255,255,255,.9);
+    border-radius: 50%; pointer-events: none;
+    display: none; transform: translate(-50%,-50%);
+    z-index: 100; box-shadow: 0 0 0 1px rgba(0,0,0,.4);
+  }
+
+  #recordingMask {
+    position: fixed; top: 12px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(192,57,43,.92); color: #fff;
+    padding: 8px 18px; border-radius: 24px; font-size: 13px;
+    z-index: 200; display: none; align-items: center; gap: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  }
+  #recordingMask.show { display: flex; }
+  #recordingMask .blink {
+    width: 10px; height: 10px; border-radius: 50%; background: #fff;
+    animation: blinkDot 1s infinite;
+  }
+  @keyframes blinkDot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .25; }
+  }
+
+  /* ===== 帮助弹窗 ===== */
+  #helpModal {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #helpModal.show { display: flex; }
+
+  #helpBackdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+
+  #helpPanel {
+    position: relative;
+    width: 620px;
+    max-width: 100%;
+    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
+    background: #ffffff;
+    color: #222;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: helpIn .2s ease-out;
+  }
+  @keyframes helpIn {
+    from { opacity: 0; transform: translateY(12px) scale(.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  #helpHeader {
+    display: flex;
+    align-items: center;
+    padding: 14px 18px;
+    background: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+    flex-shrink: 0;
+  }
+  #helpHeader h2 {
+    margin: 0;
+    font-size: 15px;
+    color: #222;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #helpHeader h2 .badge {
+    display: inline-flex; gap: 3px;
+  }
+  #helpHeader h2 .badge span {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+
+  #helpClose {
+    margin-left: auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    color: #888;
+    font-size: 16px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    transition: background .12s, color .12s;
+  }
+  #helpClose:hover { background: #eee; color: #333; }
+
+  #helpBody {
+    padding: 18px 20px 22px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #333;
+  }
+  #helpBody h3 {
+    font-size: 13px;
+    margin: 18px 0 6px;
+    color: #222;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #helpBody h3:first-child { margin-top: 0; }
+  #helpBody h3 .step-no {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #2c7be5;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  #helpBody p {
+    margin: 4px 0 8px;
+    color: #555;
+  }
+  #helpBody ul {
+    margin: 4px 0 10px;
+    padding-left: 22px;
+    color: #555;
+  }
+  #helpBody ul li {
+    margin: 3px 0;
+  }
+  #helpBody code {
+    background: #f0f0f0;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #c0392b;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  #helpBody .tip {
+    background: #eef5fd;
+    border-left: 3px solid #2c7be5;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 10px 0;
+    font-size: 12px;
+    color: #2c5b9b;
+  }
+  #helpBody .dot-inline {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin: 0 3px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.1);
+  }
+  #helpFooter {
+    padding: 10px 18px;
+    text-align: center;
+    background: #fafafa;
+    border-top: 1px solid #e8e8e8;
+    color: #999;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 700px) {
+    #app { flex-direction: column; }
+    #panelWrap {
+      width: 100%; max-height: 58vh;
+      border-right: none; border-bottom: 1px solid #e0e0e0;
+      transition: max-height .28s ease, border-color .28s ease;
+    }
+    #panelWrap.collapsed { width: 100%; max-height: 0; border-bottom-color: transparent; }
+    #panelInner { width: 100%; max-height: 58vh; }
+    #toolbar { max-height: calc(58vh - 46px); }
+    #floatToggle { width: 42px; height: 42px; top: 10px; left: 10px; }
+    #stage { padding: 6px; }
+
+    #panelHeader { padding: 6px 10px; padding-top: calc(6px + env(safe-area-inset-top, 0px)); gap: 4px; }
+    #panelHeader h1 { font-size: 12px; gap: 5px; }
+    .mini-dots span { width: 7px; height: 7px; }
+    .icon-btn { width: 28px; height: 28px; }
+    #togglePanelBtn { height: 28px; padding: 4px 7px; font-size: 11px; }
+
+    .jelly-tab { width: 16px; height: 16px; }
+    .jelly-tabs { gap: 5px; }
+
+    #helpModal { padding: 12px; }
+    #helpPanel { max-height: calc(100dvh - 24px); }
+    #helpBody { padding: 14px 16px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <aside id="panelWrap">
+    <div id="panelInner">
+
+      <div id="panelHeader">
+        <h1>
+          <span class="mini-dots">
+            <span class="d0"></span><span class="d1"></span>
+            <span class="d2"></span><span class="d3"></span>
+          </span>
+          果冻晃动
+        </h1>
+
+        <div class="header-actions">
+          <button id="btnUpload" class="icon-btn" title="更换图片">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </button>
+          <button id="btnReset" class="icon-btn" title="重置">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="1 4 1 10 7 10"/>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+            </svg>
+          </button>
+          <button id="btnHelp" class="icon-btn" title="使用说明">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </button>
+        </div>
+
+        <button id="togglePanelBtn">收起 <span class="arrow">◀</span></button>
+      </div>
+
+      <div id="toolbar">
+
+        <!-- 抽屉 1：果冻设置 -->
+        <div class="panel-section" data-section="jellies">
+          <div class="section-header">
+            <span class="section-title">果冻设置</span>
+            <span class="jelly-tabs" id="jellyTabs">
+              <button class="jelly-tab active" data-jelly-tab="0" style="--c:#FF0000" title="果冻 1"></button>
+              <button class="jelly-tab" data-jelly-tab="1" style="--c:#87CEEB" title="果冻 2"></button>
+              <button class="jelly-tab" data-jelly-tab="2" style="--c:#FFFF00" title="果冻 3"></button>
+              <button class="jelly-tab" data-jelly-tab="3" style="--c:#90EE90" title="果冻 4"></button>
+            </span>
+            <span class="section-arrow">▾</span>
+          </div>
+          <div class="section-body">
+            <div id="jellyRowsContainer"></div>
+          </div>
+        </div>
+
+        <!-- 抽屉 2：共享参数（默认收起） -->
+        <div class="panel-section collapsed" data-section="params">
+          <div class="section-header">
+            <span class="section-title">共享参数</span>
+            <span class="section-arrow">▾</span>
+          </div>
+          <div class="section-body">
+            <div class="row shared">
+              <div class="row-label">双击数值可重置</div>
+              <div class="group">
+                <label>弹性</label>
+                <input type="range" id="anchorRange" min="2" max="40" value="10">
+                <span class="val" id="anchorVal" data-default="10" title="双击重置">10</span>
+              </div>
+              <div class="group">
+                <label>阻尼</label>
+                <input type="range" id="dampingRange" min="70" max="99" value="80">
+                <span class="val" id="dampingVal" data-default="80" title="双击重置">80</span>
+              </div>
+              <div class="group">
+                <label>笔刷</label>
+                <input type="range" id="brushRange" min="20" max="300" value="70">
+                <span class="val" id="brushVal" data-default="70" title="双击重置">70</span>
+              </div>
+              <div class="group">
+                <label>力度</label>
+                <input type="range" id="forceRange" min="20" max="200" value="95">
+                <span class="val" id="forceVal" data-default="95" title="双击重置">95</span>
+              </div>
+              <div class="group">
+                <label>自动速度</label>
+                <input type="range" id="autoSpeedRange" min="20" max="200" value="80">
+                <span class="val" id="autoSpeedVal" data-default="80" title="双击重置">80</span>
+              </div>
+              <div class="group">
+                <label>自动幅度</label>
+                <input type="range" id="autoAmpRange" min="2" max="40" value="12">
+                <span class="val" id="autoAmpVal" data-default="12" title="双击重置">12</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 抽屉 3：导出（默认收起） -->
+        <div class="panel-section collapsed" data-section="export">
+          <div class="section-header">
+            <span class="section-title">导出</span>
+            <span class="section-arrow">▾</span>
+          </div>
+          <div class="section-body">
+            <div class="row export-row">
+              <div class="row-label">导出时长</div>
+              <div class="group">
+                <label>时长</label>
+                <input type="range" id="exportDurRange" min="5" max="30" value="6">
+                <span class="val" id="exportDurVal" data-default="6" title="双击重置">6s</span>
+              </div>
+              <button id="btnExport">导出 WebM</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </aside>
+
+  <main id="stage">
+    <button id="floatToggle" title="展开面板">☰</button>
+    <canvas id="canvas" width="600" height="400"></canvas>
+    <div id="overlay">
+      <button id="uploadBtn">点击上传图片</button>
+    </div>
+    <div id="floatingHint"></div>
+  </main>
+
+</div>
+
+<!-- ===== 帮助弹窗 ===== -->
+<div id="helpModal">
+  <div id="helpBackdrop"></div>
+  <div id="helpPanel">
+    <div id="helpHeader">
+      <h2>
+        <span class="badge">
+          <span style="background:#FF0000"></span>
+          <span style="background:#87CEEB"></span>
+          <span style="background:#FFFF00"></span>
+          <span style="background:#90EE90"></span>
+        </span>
+        果冻晃动 · 使用说明
+      </h2>
+      <button id="helpClose" title="关闭">✕</button>
+    </div>
+    <div id="helpBody">
+
+      <h3><span class="step-no">1</span>上传图片</h3>
+      <p>首次打开点击画布中央的「点击上传图片」。之后想换图，点标题栏的 <code>🖼</code> 图标。图片不会上传服务器，全部在本地处理。</p>
+
+      <h3><span class="step-no">2</span>选择果冻</h3>
+      <p>面板「果冻设置」里有 4 个彩色圆点：</p>
+      <ul>
+        <li><span class="dot-inline" style="background:#FF0000"></span> 果冻 1（正红 / 涂抹红色，光标深红）</li>
+        <li><span class="dot-inline" style="background:#87CEEB"></span> 果冻 2（浅蓝 / 涂抹浅蓝，光标正蓝）</li>
+        <li><span class="dot-inline" style="background:#FFFF00"></span> 果冻 3（正黄 / 涂抹正黄，光标正黄）</li>
+        <li><span class="dot-inline" style="background:#90EE90"></span> 果冻 4（浅绿 / 涂抹浅绿，光标深绿）</li>
+      </ul>
+      <p>点圆点可以同时显示或隐藏多个果冻行，不是单选。点亮的行代表"当前可在画布上操作这个果冻"。</p>
+
+      <h3><span class="step-no">3</span>涂抹区域</h3>
+      <p>点某个果冻行里的「涂抹」按钮，然后在画布上按住拖动。被涂抹的区域会以该果冻的颜色半透明覆盖，这些区域就是"会晃动的地方"。</p>
+      <p>笔刷大小、软硬由「共享参数 → 笔刷」控制。</p>
+
+      <h3><span class="step-no">4</span>晃动图片</h3>
+      <p>点「晃动」按钮，在画布上按住拖动，就会在鼠标附近产生推挤和回弹。松手后会像果冻一样晃动。</p>
+      <p>参数影响手感：</p>
+      <ul>
+        <li><b>弹性</b> — 回弹的速度，越大越"紧"</li>
+        <li><b>阻尼</b> — 晃动的持续度，越大越快停下</li>
+        <li><b>力度</b> — 拖拽产生的推力大小</li>
+      </ul>
+
+      <h3><span class="step-no">5</span>自动晃动</h3>
+      <p>点「自动晃动」让该果冻持续摆动，不用手动拖。旁边「模式」下拉可以选：</p>
+      <ul>
+        <li><b>综合</b> — 每隔「间隔」秒在下面几种里随机切换</li>
+        <li><b>左右 / 上下 / 逆时针 / 顺时针 / 左上↘右下 / 左下↗右上</b></li>
+      </ul>
+      <p>「间隔」控制综合模式的切换周期。「自动速度」「自动幅度」在共享参数里调节。</p>
+
+      <h3><span class="step-no">6</span>晃动光标</h3>
+      <p>开启后，画布上会跟着鼠标或自动轨迹显示一个圆圈，颜色对应果冻，便于看到当前作用范围。</p>
+
+      <h3><span class="step-no">7</span>重置 / 导出</h3>
+      <ul>
+        <li><b>重置</b>（标题栏 ↺ 图标）— 清除所有涂抹和位移，回到初始状态</li>
+        <li><b>导出 WebM</b> — 在「导出」抽屉里，可调 5~30 秒，默认 6 秒。点导出后会自动录制并下载 webm 视频文件</li>
+      </ul>
+
+      <h3><span class="step-no">8</span>面板折叠</h3>
+      <ul>
+        <li>点「果冻设置」「共享参数」「导出」标题可以独立折叠/展开</li>
+        <li>点右上「收起 ◀」整个面板滑入侧边，画布占满屏幕</li>
+        <li>面板收起时左上角会出现 <code>☰</code> 按钮，点一下重新展开</li>
+      </ul>
+
+      <div class="tip">
+        <b>小技巧：</b>双击任意参数数值可以快速重置到默认值。「间隔」拖动越小自动模式切换越快。导出前先让所有果冻的自动晃动都打开，效果更生动。
+      </div>
+
+    </div>
+    <div id="helpFooter">全部处理在本地完成，图片不会上传到任何服务器</div>
+  </div>
+</div>
+
+<div id="recordingMask">
+  <span class="blink"></span>
+  <span id="recordingText">录制中 6s</span>
+</div>
+
+<input type="file" id="fileInput" accept="image/*">
+
+<script>
+(function () {
+  'use strict';
+
+  const JELLY_CONFIGS = [
+    { id: 0, label: '果冻 1', accent: '#FF0000', cursor: '#8B0000', paintVec: [1.0, 0.0, 0.0], rowBg: 'rgba(255,0,0,.05)' },
+    { id: 1, label: '果冻 2', accent: '#87CEEB', cursor: '#0000FF', paintVec: [0.53, 0.81, 0.92], rowBg: 'rgba(135,206,235,.15)' },
+    { id: 2, label: '果冻 3', accent: '#FFFF00', cursor: '#FFFF00', paintVec: [1.0, 1.0, 0.0], rowBg: 'rgba(255,250,205,.55)' },
+    { id: 3, label: '果冻 4', accent: '#90EE90', cursor: '#006400', paintVec: [0.56, 0.93, 0.56], rowBg: 'rgba(144,238,144,.18)' },
+  ];
+
+  function isLightColor(hex) {
+    const c = hex.replace('#','');
+    const r = parseInt(c.substr(0,2), 16);
+    const g = parseInt(c.substr(2,2), 16);
+    const b = parseInt(c.substr(4,2), 16);
+    return (0.299*r + 0.587*g + 0.114*b) > 155;
+  }
+
+  const MAX_DIM     = 1000;
+  const TARGET_CELL = 16;
+  const MIN_GRID    = 20;
+  const MAX_GRID    = 64;
+  const STRUCT_K    = 0.12;
+
+  const SUB_MODES = ['horizontal', 'vertical', 'ccw', 'cw', 'diagTLBR', 'diagBLTR'];
+
+  const shared = {
+    anchorK: 0.10,
+    damping: 0.80,
+    brushRadius: 70,
+    forceStrength: 0.95,
+    brushStrength: 0.45,
+    autoSpeed: 0.08,
+    autoAmpRatio: 0.12,
+  };
+
+  function createJelly(cfg) {
+    return {
+      id: cfg.id, cfg,
+      paintColorStr: cfg.accent,
+      cursorColorStr: cfg.cursor,
+      paintColorVec: cfg.paintVec,
+      mode: 'jiggle',
+      autoJiggle: false,
+      showCursor: false,
+      autoMode: 'combined',
+      autoInterval: 3000,
+      autoSubMode: 'horizontal',
+      autoLastSwitch: 0,
+      autoTime: 0,
+      autoPrevX: null, autoPrevY: null,
+      posX: null, posY: null,
+      velX: null, velY: null,
+      weight: null,
+      vertexBuffer: null, vertexData: null,
+    };
+  }
+
+  const jellies = JELLY_CONFIGS.map(createJelly);
+  let activeJellyIndex = 0;
+
+  const canvas   = document.getElementById('canvas');
+  const overlay  = document.getElementById('overlay');
+  const fileInput= document.getElementById('fileInput');
+  const uploadBtn= document.getElementById('uploadBtn');
+
+  function buildJellyRows() {
+    const container = document.getElementById('jellyRowsContainer');
+    const selectOptions = `
+      <option value="combined" selected>综合</option>
+      <option value="horizontal">左右</option>
+      <option value="vertical">上下</option>
+      <option value="ccw">逆时针</option>
+      <option value="cw">顺时针</option>
+      <option value="diagTLBR">左上↘右下</option>
+      <option value="diagBLTR">左下↗右上</option>
+    `;
+
+    let html = '';
+    JELLY_CONFIGS.forEach(cfg => {
+      const accentText = isLightColor(cfg.accent) ? '#222' : '#fff';
+      const cursorText = isLightColor(cfg.cursor) ? '#222' : '#fff';
+      const hiddenClass = cfg.id === 0 ? '' : ' hidden';
+
+      html += `
+        <div class="row jelly-row${cfg.id === 0 ? ' active-row' : ''}${hiddenClass}" data-jelly="${cfg.id}"
+             style="--jelly-accent:${cfg.accent}; --jelly-cursor:${cfg.cursor}; --jelly-accent-text:${accentText}; --jelly-cursor-text:${cursorText}; --jelly-row-bg:${cfg.rowBg};">
+          <span class="jelly-label">
+            <span class="dot" style="background:${cfg.accent}; box-shadow: 0 0 6px ${cfg.accent}88;"></span>
+            ${cfg.label}
+          </span>
+          <button data-jb="${cfg.id}-jiggle" class="mode-btn active">晃动</button>
+          <button data-jb="${cfg.id}-paint" class="mode-btn">涂抹</button>
+          <span class="sep"></span>
+          <button data-jb="${cfg.id}-auto" class="toggle-btn">自动晃动</button>
+          <button data-jb="${cfg.id}-cursor" class="toggle-btn">晃动光标</button>
+          <span class="sep"></span>
+          <div class="group">
+            <label>模式</label>
+            <select data-js="${cfg.id}-mode">${selectOptions}</select>
+          </div>
+          <div class="group">
+            <label>间隔</label>
+            <input type="range" data-jr="${cfg.id}-interval" min="5" max="100" value="30">
+            <span class="val" data-jv="${cfg.id}-interval" data-default="30" title="双击重置">3.0s</span>
+          </div>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  }
+  buildJellyRows();
+
+  const cursorEls = [];
+  JELLY_CONFIGS.forEach(cfg => {
+    const el = document.createElement('div');
+    el.className = 'brush-cursor';
+    el.id = 'cursor' + cfg.id;
+    document.body.appendChild(el);
+    cursorEls.push(el);
+  });
+
+  // 折叠区块
+  document.querySelectorAll('.panel-section').forEach(section => {
+    const header = section.querySelector('.section-header');
+    header.addEventListener('click', () => {
+      section.classList.toggle('collapsed');
+    });
+  });
+
+  // 面板折叠
+  const panelWrap = document.getElementById('panelWrap');
+  const toggleBtn = document.getElementById('togglePanelBtn');
+  const floatToggle = document.getElementById('floatToggle');
+  const floatingHint = document.getElementById('floatingHint');
+  let hintTimer = null;
+
+  function setPanelCollapsed(collapsed) {
+    panelWrap.classList.toggle('collapsed', collapsed);
+    if (collapsed) showHint('点击左上角 ☰ 可重新展开面板');
+    else hideHint();
+  }
+
+  function showHint(text, duration) {
+    floatingHint.textContent = text;
+    floatingHint.classList.add('show');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(hideHint, duration || 2500);
+  }
+  function hideHint() {
+    floatingHint.classList.remove('show');
+    clearTimeout(hintTimer);
+  }
+
+  toggleBtn.addEventListener('click', () => setPanelCollapsed(true));
+  floatToggle.addEventListener('click', () => setPanelCollapsed(false));
+
+  // ===== 帮助弹窗 =====
+  const helpModal = document.getElementById('helpModal');
+  const helpBackdrop = document.getElementById('helpBackdrop');
+  const btnHelp = document.getElementById('btnHelp');
+  const helpClose = document.getElementById('helpClose');
+
+  function openHelp() {
+    helpModal.classList.add('show');
+  }
+  function closeHelp() {
+    helpModal.classList.remove('show');
+  }
+
+  btnHelp.addEventListener('click', openHelp);
+  helpClose.addEventListener('click', closeHelp);
+  helpBackdrop.addEventListener('click', closeHelp);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && helpModal.classList.contains('show')) {
+      closeHelp();
+    }
+  });
+
+  // 果冻 tab 多选切换
+  const jellyTabs = document.querySelectorAll('.jelly-tab');
+  const jellySection = document.querySelector('.panel-section[data-section="jellies"]');
+
+  function toggleJellyVisibility(idx) {
+    const tab = document.querySelector(`.jelly-tab[data-jelly-tab="${idx}"]`);
+    const row = document.querySelector(`.jelly-row[data-jelly="${idx}"]`);
+    if (!tab || !row) return;
+
+    const isHidden = row.classList.contains('hidden');
+    if (isHidden) {
+      row.classList.remove('hidden');
+      tab.classList.add('active');
+    } else {
+      row.classList.add('hidden');
+      tab.classList.remove('active');
+    }
+
+    setActiveJelly(idx);
+
+    if (jellySection && jellySection.classList.contains('collapsed')) {
+      jellySection.classList.remove('collapsed');
+    }
+  }
+
+  jellyTabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(tab.dataset.jellyTab, 10);
+      toggleJellyVisibility(idx);
+    });
+  });
+
+  // WebGL
+  const gl = canvas.getContext('webgl', {
+    alpha: false, antialias: true, premultipliedAlpha: false,
+    preserveDrawingBuffer: true,
+  }) || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: true });
+
+  if (!gl) { alert('您的浏览器不支持 WebGL'); return; }
+
+  const VS = `
+    attribute vec2 a_pos;
+    attribute vec2 a_uv;
+    attribute float a_weight;
+    uniform vec2 u_res;
+    varying vec2 v_uv;
+    varying float v_weight;
+    void main() {
+      vec2 clip = vec2(
+        a_pos.x / u_res.x * 2.0 - 1.0,
+        1.0 - a_pos.y / u_res.y * 2.0
+      );
+      gl_Position = vec4(clip, 0.0, 1.0);
+      v_uv = a_uv;
+      v_weight = a_weight;
+    }
+  `;
+
+  const FS = `
+    precision mediump float;
+    uniform sampler2D u_tex;
+    uniform float u_showWeights;
+    uniform vec3 u_weightColor;
+    uniform float u_useWeightAlpha;
+    varying vec2 v_uv;
+    varying float v_weight;
+    void main() {
+      vec4 color = texture2D(u_tex, v_uv);
+      if (u_showWeights > 0.5) {
+        color.rgb = mix(color.rgb, u_weightColor, v_weight * 0.35);
+      }
+      if (u_useWeightAlpha > 0.5) {
+        color.a = smoothstep(0.005, 0.18, v_weight);
+      }
+      gl_FragColor = color;
+    }
+  `;
+
+  function compileShader(type, source) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, source);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.error(gl.getShaderInfoLog(s));
+      return null;
+    }
+    return s;
+  }
+
+  const program = gl.createProgram();
+  gl.attachShader(program, compileShader(gl.VERTEX_SHADER, VS));
+  gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.error(gl.getProgramInfoLog(program));
+    return;
+  }
+  gl.useProgram(program);
+
+  const a_pos    = gl.getAttribLocation(program, 'a_pos');
+  const a_uv     = gl.getAttribLocation(program, 'a_uv');
+  const a_weight = gl.getAttribLocation(program, 'a_weight');
+  const u_res    = gl.getUniformLocation(program, 'u_res');
+  const u_tex    = gl.getUniformLocation(program, 'u_tex');
+  const u_show   = gl.getUniformLocation(program, 'u_showWeights');
+  const u_wcolor = gl.getUniformLocation(program, 'u_weightColor');
+  const u_walpha = gl.getUniformLocation(program, 'u_useWeightAlpha');
+
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  const indexBuffer = gl.createBuffer();
+  const bgBuffer    = gl.createBuffer();
+  const texture     = gl.createTexture();
+
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+    new Uint8Array([20, 20, 20, 255]));
+
+  gl.clearColor(0.05, 0.05, 0.05, 1);
+
+  const bgVerts = new Float32Array(30);
+
+  let cols = 0, rows = 0, vertexCount = 0, indexCount = 0;
+  let origX, origY, uvData;
+  let neighborIdx, restDist;
+  let gridReady = false;
+
+  function buildGrid(w, h) {
+    cols = Math.round(w / TARGET_CELL);
+    rows = Math.round(h / TARGET_CELL);
+    cols = Math.max(MIN_GRID, Math.min(MAX_GRID, cols));
+    rows = Math.max(MIN_GRID, Math.min(MAX_GRID, rows));
+
+    vertexCount = cols * rows;
+
+    origX = new Float32Array(vertexCount);
+    origY = new Float32Array(vertexCount);
+
+    const sx = w / (cols - 1);
+    const sy = h / (rows - 1);
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const i = r * cols + c;
+        origX[i] = c * sx;
+        origY[i] = r * sy;
+      }
+    }
+
+    neighborIdx = new Int32Array(vertexCount * 4).fill(-1);
+    restDist    = new Float32Array(vertexCount * 4);
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const i = r * cols + c;
+        const o = i * 4;
+        const ns = [
+          c > 0        ? i - 1    : -1,
+          c < cols - 1 ? i + 1    : -1,
+          r > 0        ? i - cols : -1,
+          r < rows - 1 ? i + cols : -1,
+        ];
+        for (let k = 0; k < 4; k++) {
+          const j = ns[k];
+          neighborIdx[o + k] = j;
+          if (j >= 0) {
+            const dx = origX[j] - origX[i];
+            const dy = origY[j] - origY[i];
+            restDist[o + k] = Math.sqrt(dx * dx + dy * dy);
+          }
+        }
+      }
+    }
+
+    const idx = [];
+    for (let r = 0; r < rows - 1; r++) {
+      for (let c = 0; c < cols - 1; c++) {
+        const a = r * cols + c;
+        const b = a + 1;
+        const d = a + cols;
+        const e = d + 1;
+        idx.push(a, b, d, b, e, d);
+      }
+    }
+    indexCount = idx.length;
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+
+    uvData = new Float32Array(vertexCount * 2);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const i = r * cols + c;
+        uvData[i * 2]     = c / (cols - 1);
+        uvData[i * 2 + 1] = 1 - r / (rows - 1);
+      }
+    }
+
+    for (const jelly of jellies) {
+      jelly.posX = new Float32Array(vertexCount);
+      jelly.posY = new Float32Array(vertexCount);
+      jelly.velX = new Float32Array(vertexCount);
+      jelly.velY = new Float32Array(vertexCount);
+      jelly.weight = new Float32Array(vertexCount);
+      jelly.vertexData = new Float32Array(vertexCount * 5);
+
+      for (let i = 0; i < vertexCount; i++) {
+        jelly.posX[i] = origX[i];
+        jelly.posY[i] = origY[i];
+      }
+
+      if (!jelly.vertexBuffer) jelly.vertexBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, jelly.vertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, jelly.vertexData.byteLength, gl.DYNAMIC_DRAW);
+    }
+
+    gridReady = true;
+  }
+
+  function stepJellyPhysics(jelly) {
+    const anchorK = shared.anchorK;
+    const damping = shared.damping;
+    const structK = STRUCT_K;
+
+    for (let i = 0; i < vertexCount; i++) {
+      const px = jelly.posX[i], py = jelly.posY[i];
+      let ax = 0, ay = 0;
+
+      const w = jelly.weight[i];
+      const aK = anchorK * (1 - w * 0.95);
+      ax += (origX[i] - px) * aK;
+      ay += (origY[i] - py) * aK;
+
+      const o = i * 4;
+      for (let k = 0; k < 4; k++) {
+        const j = neighborIdx[o + k];
+        if (j < 0) continue;
+        const dx = jelly.posX[j] - px;
+        const dy = jelly.posY[j] - py;
+        const dist = Math.sqrt(dx * dx + dy * dy) + 1e-4;
+        const f = (dist - restDist[o + k]) * structK;
+        const inv = f / dist;
+        ax += dx * inv;
+        ay += dy * inv;
+      }
+
+      let vx = (jelly.velX[i] + ax) * damping;
+      let vy = (jelly.velY[i] + ay) * damping;
+
+      const MAX_VEL = 5;
+      if (vx >  MAX_VEL) vx =  MAX_VEL;
+      if (vx < -MAX_VEL) vx = -MAX_VEL;
+      if (vy >  MAX_VEL) vy =  MAX_VEL;
+      if (vy < -MAX_VEL) vy = -MAX_VEL;
+
+      jelly.velX[i] = vx;
+      jelly.velY[i] = vy;
+      jelly.posX[i] = px + vx;
+      jelly.posY[i] = py + vy;
+    }
+  }
+
+  function applyImpulseToJelly(jelly, mdx, mdy, cx, cy, radiusOverride) {
+    const MAX_STEP = 12;
+    mdx = Math.max(-MAX_STEP, Math.min(MAX_STEP, mdx));
+    mdy = Math.max(-MAX_STEP, Math.min(MAX_STEP, mdy));
+
+    const radius = radiusOverride || shared.brushRadius;
+    const r2 = radius * radius;
+    const strength = shared.forceStrength;
+
+    for (let i = 0; i < vertexCount; i++) {
+      const dx = jelly.posX[i] - cx;
+      const dy = jelly.posY[i] - cy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > r2) continue;
+
+      const d = Math.sqrt(d2);
+      const falloff = 1 - d / radius;
+      const smooth = falloff * falloff;
+      const influence = (0.12 + jelly.weight[i] * 0.88) * smooth * strength;
+
+      jelly.velX[i] += mdx * influence * 0.06;
+      jelly.velY[i] += mdy * influence * 0.06;
+    }
+  }
+
+  function paintAtJelly(jelly, x, y) {
+    const radius = shared.brushRadius;
+    const r2 = radius * radius;
+    const strength = shared.brushStrength;
+
+    for (let i = 0; i < vertexCount; i++) {
+      const dx = origX[i] - x;
+      const dy = origY[i] - y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > r2) continue;
+      const d = Math.sqrt(d2);
+      const falloff = 1 - d / radius;
+      jelly.weight[i] = Math.min(1, jelly.weight[i] + falloff * strength);
+    }
+  }
+
+  function pickRandomSubMode(exclude) {
+    if (SUB_MODES.length < 2) return SUB_MODES[0];
+    let next, guard = 0;
+    do {
+      next = SUB_MODES[Math.floor(Math.random() * SUB_MODES.length)];
+      guard++;
+    } while (next === exclude && guard < 20);
+    return next;
+  }
+
+  function resetAutoMotion(jelly) {
+    jelly.autoPrevX = null;
+    jelly.autoPrevY = null;
+    jelly.autoTime = 0;
+    jelly.autoLastSwitch = performance.now();
+    jelly.autoSubMode = pickRandomSubMode(null);
+  }
+
+  function autoJiggleStep(jelly) {
+    let sumW = 0, cx = 0, cy = 0;
+    for (let i = 0; i < vertexCount; i++) {
+      const w = jelly.weight[i];
+      if (w > 0.15) {
+        sumW += w;
+        cx += origX[i] * w;
+        cy += origY[i] * w;
+      }
+    }
+    if (sumW > 0) { cx /= sumW; cy /= sumW; }
+    else { cx = canvas.width / 2; cy = canvas.height / 2; }
+
+    let currentMode = jelly.autoMode;
+    if (currentMode === 'combined') {
+      const now = performance.now();
+      if (now - jelly.autoLastSwitch >= jelly.autoInterval) {
+        jelly.autoSubMode = pickRandomSubMode(jelly.autoSubMode);
+        jelly.autoLastSwitch = now;
+        jelly.autoPrevX = null;
+        jelly.autoPrevY = null;
+      }
+      currentMode = jelly.autoSubMode;
+    }
+
+    jelly.autoTime += shared.autoSpeed;
+    const amp = canvas.width * shared.autoAmpRatio;
+    const t = jelly.autoTime;
+    const diagAmp = amp * 0.7071;
+
+    let vx, vy;
+    switch (currentMode) {
+      case 'horizontal': vx = cx + Math.sin(t) * amp; vy = cy; break;
+      case 'vertical':   vx = cx; vy = cy + Math.sin(t) * amp; break;
+      case 'ccw':        vx = cx + Math.cos(t) * amp; vy = cy - Math.sin(t) * amp; break;
+      case 'cw':         vx = cx + Math.cos(t) * amp; vy = cy + Math.sin(t) * amp; break;
+      case 'diagTLBR':
+        vx = cx + Math.sin(t) * diagAmp;
+        vy = cy + Math.sin(t) * diagAmp;
+        break;
+      case 'diagBLTR':
+        vx = cx + Math.sin(t) * diagAmp;
+        vy = cy - Math.sin(t) * diagAmp;
+        break;
+      default: vx = cx; vy = cy;
+    }
+
+    if (jelly.autoPrevX === null) jelly.autoPrevX = vx;
+    if (jelly.autoPrevY === null) jelly.autoPrevY = vy;
+    const mdx = vx - jelly.autoPrevX;
+    const mdy = vy - jelly.autoPrevY;
+
+    const minRadius = canvas.width * 0.12;
+    const useRadius = Math.max(shared.brushRadius, minRadius);
+
+    applyImpulseToJelly(jelly, mdx, mdy, vx, vy, useRadius);
+
+    jelly.autoPrevX = vx;
+    jelly.autoPrevY = vy;
+  }
+
+  function drawBackground() {
+    const w = canvas.width, h = canvas.height;
+    bgVerts[0]=0;  bgVerts[1]=0;  bgVerts[2]=0; bgVerts[3]=1; bgVerts[4]=0;
+    bgVerts[5]=w;  bgVerts[6]=0;  bgVerts[7]=1; bgVerts[8]=1; bgVerts[9]=0;
+    bgVerts[10]=0; bgVerts[11]=h; bgVerts[12]=0; bgVerts[13]=0; bgVerts[14]=0;
+    bgVerts[15]=w; bgVerts[16]=0; bgVerts[17]=1; bgVerts[18]=1; bgVerts[19]=0;
+    bgVerts[20]=w; bgVerts[21]=h; bgVerts[22]=1; bgVerts[23]=0; bgVerts[24]=0;
+    bgVerts[25]=0; bgVerts[26]=h; bgVerts[27]=0; bgVerts[28]=0; bgVerts[29]=0;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, bgBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, bgVerts, gl.DYNAMIC_DRAW);
+
+    const stride = 5 * 4;
+    gl.vertexAttribPointer(a_pos,    2, gl.FLOAT, false, stride, 0);
+    gl.vertexAttribPointer(a_uv,     2, gl.FLOAT, false, stride, 2 * 4);
+    gl.vertexAttribPointer(a_weight, 1, gl.FLOAT, false, stride, 4 * 4);
+    gl.enableVertexAttribArray(a_pos);
+    gl.enableVertexAttribArray(a_uv);
+    gl.enableVertexAttribArray(a_weight);
+
+    gl.uniform1f(u_show, 0);
+    gl.uniform1f(u_walpha, 0);
+    gl.uniform3f(u_wcolor, 0, 0, 0);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+
+  function renderJelly(jelly) {
+    let o = 0;
+    const vd = jelly.vertexData;
+    for (let i = 0; i < vertexCount; i++) {
+      vd[o++] = jelly.posX[i];
+      vd[o++] = jelly.posY[i];
+      vd[o++] = uvData[i * 2];
+      vd[o++] = uvData[i * 2 + 1];
+      vd[o++] = jelly.weight[i];
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, jelly.vertexBuffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, vd);
+
+    const stride = 5 * 4;
+    gl.vertexAttribPointer(a_pos,    2, gl.FLOAT, false, stride, 0);
+    gl.vertexAttribPointer(a_uv,     2, gl.FLOAT, false, stride, 2 * 4);
+    gl.vertexAttribPointer(a_weight, 1, gl.FLOAT, false, stride, 4 * 4);
+    gl.enableVertexAttribArray(a_pos);
+    gl.enableVertexAttribArray(a_uv);
+    gl.enableVertexAttribArray(a_weight);
+
+    const showW = jelly.mode === 'paint';
+    gl.uniform1f(u_show, showW ? 1 : 0);
+    gl.uniform3fv(u_wcolor, jelly.paintColorVec);
+    gl.uniform1f(u_walpha, 1);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.drawElements(gl.TRIANGLES, indexCount, gl.UNSIGNED_SHORT, 0);
+  }
+
+  function render() {
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.uniform2f(u_res, canvas.width, canvas.height);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.uniform1i(u_tex, 0);
+
+    drawBackground();
+    for (const jelly of jellies) renderJelly(jelly);
+  }
+
+  let mouseX = 0, mouseY = 0, prevMouseX = 0, prevMouseY = 0;
+  let pointerDown = false;
+  let isOverCanvas = false;
+
+  function updateCursors() {
+    const rect = canvas.getBoundingClientRect();
+    const scale = rect.width / canvas.width;
+    const hasImg = rect.width > 0 && rect.height > 0;
+
+    for (let idx = 0; idx < jellies.length; idx++) {
+      const jelly = jellies[idx];
+      const el = cursorEls[idx];
+      let visible = false;
+      let color = '';
+      let px = 0, py = 0;
+      const size = shared.brushRadius * 2;
+
+      if (jelly.autoJiggle) {
+        if (jelly.showCursor && jelly.autoPrevX !== null) {
+          px = jelly.autoPrevX;
+          py = jelly.autoPrevY;
+          color = jelly.cursorColorStr;
+          visible = true;
+        }
+      } else if (idx === activeJellyIndex && isOverCanvas) {
+        if (jelly.mode === 'paint') {
+          px = mouseX; py = mouseY;
+          color = jelly.paintColorStr;
+          visible = true;
+        } else if (jelly.showCursor) {
+          px = mouseX; py = mouseY;
+          color = jelly.cursorColorStr;
+          visible = true;
+        }
+      }
+
+      if (visible && hasImg) {
+        el.style.left   = (rect.left + px * scale) + 'px';
+        el.style.top    = (rect.top  + py * scale) + 'px';
+        el.style.width  = (size * scale) + 'px';
+        el.style.height = (size * scale) + 'px';
+        el.style.borderColor = color;
+        el.style.display = 'block';
+      } else {
+        el.style.display = 'none';
+      }
+    }
+  }
+
+  function loop() {
+    if (gridReady) {
+      for (const jelly of jellies) {
+        if (jelly.autoJiggle) autoJiggleStep(jelly);
+      }
+
+      const active = jellies[activeJellyIndex];
+      if (active && !active.autoJiggle && pointerDown) {
+        if (active.mode === 'jiggle') {
+          const mdx = mouseX - prevMouseX;
+          const mdy = mouseY - prevMouseY;
+          if (mdx !== 0 || mdy !== 0) {
+            applyImpulseToJelly(active, mdx, mdy, mouseX, mouseY);
+          }
+        }
+      }
+      prevMouseX = mouseX;
+      prevMouseY = mouseY;
+
+      for (const jelly of jellies) stepJellyPhysics(jelly);
+
+      render();
+      updateCursors();
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  function loadImage(img) {
+    let w = img.width, h = img.height;
+    const scale = Math.min(1, MAX_DIM / Math.max(w, h));
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+
+    canvas.width  = w;
+    canvas.height = h;
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    gridReady = false;
+    buildGrid(w, h);
+
+    pointerDown = false;
+    mouseX = prevMouseX = w / 2;
+    mouseY = prevMouseY = h / 2;
+
+    for (const jelly of jellies) resetAutoMotion(jelly);
+  }
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      loadImage(img);
+      overlay.classList.add('hidden');
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      alert('图片加载失败');
+    };
+    img.src = url;
+  });
+
+  uploadBtn.addEventListener('click', () => fileInput.click());
+  document.getElementById('btnUpload').addEventListener('click', () => fileInput.click());
+
+  function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) * (canvas.width  / rect.width),
+      y: (e.clientY - rect.top ) * (canvas.height / rect.height),
+    };
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const active = jellies[activeJellyIndex];
+    if (!active || active.autoJiggle) return;
+
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    const p = getCanvasPos(e);
+    mouseX = prevMouseX = p.x;
+    mouseY = prevMouseY = p.y;
+    pointerDown = true;
+
+    if (active.mode === 'paint') paintAtJelly(active, p.x, p.y);
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    const p = getCanvasPos(e);
+    mouseX = p.x;
+    mouseY = p.y;
+
+    const active = jellies[activeJellyIndex];
+    if (active && !active.autoJiggle && pointerDown && active.mode === 'paint') {
+      paintAtJelly(active, p.x, p.y);
+    }
+  });
+
+  const endPointer = () => { pointerDown = false; };
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  window.addEventListener('blur', endPointer);
+
+  canvas.addEventListener('pointerenter', () => { isOverCanvas = true; });
+  canvas.addEventListener('pointerleave', () => {
+    isOverCanvas = false;
+    pointerDown = false;
+  });
+
+  function setActiveJelly(idx) {
+    activeJellyIndex = idx;
+    document.querySelectorAll('.jelly-row').forEach(el => {
+      const isActive = parseInt(el.dataset.jelly, 10) === idx;
+      el.classList.toggle('active-row', isActive);
+    });
+  }
+
+  function bindJellyUI(cfg) {
+    const jelly = jellies[cfg.id];
+    const id = cfg.id;
+
+    const btnJiggle = document.querySelector(`[data-jb="${id}-jiggle"]`);
+    const btnPaint  = document.querySelector(`[data-jb="${id}-paint"]`);
+    const btnAuto   = document.querySelector(`[data-jb="${id}-auto"]`);
+    const btnCursor = document.querySelector(`[data-jb="${id}-cursor"]`);
+    const selMode   = document.querySelector(`[data-js="${id}-mode"]`);
+    const rngInterval = document.querySelector(`[data-jr="${id}-interval"]`);
+    const valInterval = document.querySelector(`[data-jv="${id}-interval"]`);
+
+    btnJiggle.addEventListener('click', () => {
+      jelly.mode = 'jiggle';
+      btnJiggle.classList.add('active');
+      btnPaint.classList.remove('active');
+      setActiveJelly(id);
+    });
+
+    btnPaint.addEventListener('click', () => {
+      jelly.mode = 'paint';
+      btnPaint.classList.add('active');
+      btnJiggle.classList.remove('active');
+      setActiveJelly(id);
+    });
+
+    btnAuto.addEventListener('click', () => {
+      jelly.autoJiggle = !jelly.autoJiggle;
+      btnAuto.classList.toggle('active', jelly.autoJiggle);
+      if (jelly.autoJiggle) resetAutoMotion(jelly);
+      setActiveJelly(id);
+    });
+
+    btnCursor.addEventListener('click', () => {
+      jelly.showCursor = !jelly.showCursor;
+      btnCursor.classList.toggle('active', jelly.showCursor);
+      setActiveJelly(id);
+    });
+
+    selMode.addEventListener('change', () => {
+      jelly.autoMode = selMode.value;
+      resetAutoMotion(jelly);
+      setActiveJelly(id);
+    });
+    jelly.autoMode = selMode.value;
+
+    function applyInterval() {
+      const seconds = parseFloat(rngInterval.value) / 10;
+      jelly.autoInterval = seconds * 1000;
+      valInterval.textContent = seconds.toFixed(1) + 's';
+    }
+    rngInterval.addEventListener('input', applyInterval);
+    applyInterval();
+
+    valInterval.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      const def = valInterval.dataset.default;
+      if (def === undefined) return;
+      rngInterval.value = def;
+      rngInterval.dispatchEvent(new Event('input', { bubbles: true }));
+      valInterval.style.background = 'rgba(231,76,60,.18)';
+      setTimeout(() => { valInterval.style.background = ''; }, 180);
+    });
+  }
+
+  JELLY_CONFIGS.forEach(bindJellyUI);
+  setActiveJelly(0);
+
+  function bindRange(id, getVal) {
+    const rng = document.getElementById(id + 'Range');
+    const val = document.getElementById(id + 'Val');
+    rng.addEventListener('input', () => {
+      val.textContent = rng.value;
+      getVal(parseFloat(rng.value));
+    });
+    getVal(parseFloat(rng.value));
+
+    val.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      const def = val.dataset.default;
+      if (def === undefined) return;
+      rng.value = def;
+      rng.dispatchEvent(new Event('input', { bubbles: true }));
+      val.style.background = 'rgba(231,76,60,.25)';
+      setTimeout(() => { val.style.background = ''; }, 180);
+    });
+  }
+
+  bindRange('anchor',    v => { shared.anchorK = v / 100; });
+  bindRange('damping',   v => { shared.damping = v / 100; });
+  bindRange('brush',     v => { shared.brushRadius = v; });
+  bindRange('force',     v => { shared.forceStrength = v / 100; });
+  bindRange('autoSpeed', v => { shared.autoSpeed = v / 1000; });
+  bindRange('autoAmp',   v => { shared.autoAmpRatio = v / 100; });
+
+  const exportDurRange = document.getElementById('exportDurRange');
+  const exportDurVal   = document.getElementById('exportDurVal');
+  exportDurRange.addEventListener('input', () => {
+    exportDurVal.textContent = exportDurRange.value + 's';
+  });
+  exportDurVal.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    exportDurRange.value = exportDurVal.dataset.default;
+    exportDurRange.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  document.getElementById('btnReset').addEventListener('click', () => {
+    if (!gridReady) return;
+    for (const jelly of jellies) {
+      for (let i = 0; i < vertexCount; i++) {
+        jelly.posX[i] = origX[i];
+        jelly.posY[i] = origY[i];
+        jelly.velX[i] = 0;
+        jelly.velY[i] = 0;
+        jelly.weight[i] = 0;
+      }
+      resetAutoMotion(jelly);
+    }
+    showHint('已重置');
+  });
+
+  const btnExport = document.getElementById('btnExport');
+  const recordingMask = document.getElementById('recordingMask');
+  const recordingText = document.getElementById('recordingText');
+  let isExporting = false;
+
+  const canExport = typeof MediaRecorder !== 'undefined' &&
+                    typeof canvas.captureStream === 'function';
+  if (!canExport) {
+    btnExport.textContent = '不支持导出';
+    btnExport.disabled = true;
+    btnExport.title = '当前浏览器不支持 MediaRecorder / captureStream';
+  }
+
+  function pickMimeType() {
+    const candidates = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+    ];
+    for (const m of candidates) {
+      try { if (MediaRecorder.isTypeSupported(m)) return m; } catch (_) {}
+    }
+    return null;
+  }
+
+  btnExport.addEventListener('click', async () => {
+    if (isExporting) return;
+    if (!gridReady) { showHint('请先上传图片'); return; }
+    if (!canExport) { showHint('当前浏览器不支持 WebM 导出'); return; }
+
+    const mimeType = pickMimeType();
+    if (!mimeType) { showHint('当前浏览器不支持 WebM 编码'); return; }
+
+    const durSec = parseInt(exportDurRange.value, 10);
+    if (document.hidden) { showHint('请确保标签页在前台再导出'); return; }
+
+    isExporting = true;
+    btnExport.disabled = true;
+    btnExport.classList.add('recording');
+    recordingMask.classList.add('show');
+
+    let recorder, stream;
+    let chunks = [];
+    let timer = null;
+
+    try {
+      stream = canvas.captureStream(60);
+      recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 8_000_000,
+      });
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      const done = new Promise((resolve, reject) => {
+        recorder.onstop = resolve;
+        recorder.onerror = (e) => reject(e.error || new Error('录制失败'));
+      });
+
+      recorder.start();
+
+      let remaining = durSec;
+      recordingText.textContent = `录制中 ${remaining}s`;
+      timer = setInterval(() => {
+        remaining--;
+        if (remaining > 0) recordingText.textContent = `录制中 ${remaining}s`;
+      }, 1000);
+
+      setTimeout(() => {
+        if (recorder.state !== 'inactive') recorder.stop();
+      }, durSec * 1000);
+
+      await done;
+      clearInterval(timer);
+
+      const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
+      const url = URL.createObjectURL(blob);
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const filename = `jelly-${ts}.webm`;
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+
+      showHint(`已导出 ${filename}`, 3000);
+    } catch (err) {
+      console.error(err);
+      showHint('导出失败：' + (err.message || err));
+    } finally {
+      if (timer) clearInterval(timer);
+      try { if (stream) stream.getTracks().forEach(t => t.stop()); } catch (_) {}
+      btnExport.disabled = false;
+      btnExport.classList.remove('recording');
+      btnExport.textContent = '导出 WebM';
+      recordingMask.classList.remove('show');
+      isExporting = false;
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && isExporting) {
+      showHint('导出中请勿切换标签页，否则画面可能静止', 4000);
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
